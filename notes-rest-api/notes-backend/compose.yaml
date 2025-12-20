@@ -1,0 +1,51 @@
+name: notes-backend
+services:
+  notes:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: production
+    environment:
+      - PORT=80
+      - MONGO_URI=mongodb://${NOTES_USER}:${NOTES_PASSWORD}@notes-db/${NOTES_DB}
+      # When running inside Docker on some platforms (Windows/macOS/WSL),
+      # file system events can be unreliable. Enabling polling helps nodemon detect changes.
+      # - CHOKIDAR_USEPOLLING=1
+    ports:
+      - "3001:80"
+    # volumes:
+    #   # bind-mount the source directory so changes on the host are visible in the container
+    #   - ./src:/app/src
+    develop:
+      watch:
+        - path: ./src
+          action: sync
+          target: /app/src
+    networks:
+      - notes-network
+    depends_on:
+      - notes-db
+  
+  notes-db:
+    image: mongo:6.0
+    ports:
+      - "27018:27017"
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: mongo-init.js
+        target: /docker-entrypoint-initdb.d/mongo-init.js
+        read_only: true
+
+      - type: volume
+        source: notes-data
+        target: /data/db
+    networks:
+      - notes-network
+
+volumes:
+  notes-data:
+
+networks:
+  notes-network:

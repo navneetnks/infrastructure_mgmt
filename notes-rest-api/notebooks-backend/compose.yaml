@@ -1,0 +1,51 @@
+name: notebooks-backend
+services:
+  notebooks:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: production
+    environment:
+      - PORT=80
+      - MONGO_URI=mongodb://${NOTEBOOK_USER}:${NOTEBOOK_PASSWORD}@notebooks-db/${NOTEBOOK_DB}
+      # When running inside Docker on some platforms (Windows/macOS/WSL),
+      # file system events can be unreliable. Enabling polling helps nodemon detect changes.
+      # - CHOKIDAR_USEPOLLING=1
+    ports:
+      - "3000:80"
+    # volumes:
+    #   # bind-mount the source directory so changes on the host are visible in the container
+    #   - ./src:/app/src
+    develop:
+      watch:
+        - path: ./src
+          action: sync
+          target: /app/src
+    networks:
+      - notebooks-network
+    depends_on:
+      - notebooks-db
+  
+  notebooks-db:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: mongo-init.js
+        target: /docker-entrypoint-initdb.d/mongo-init.js
+        read_only: true
+
+      - type: volume
+        source: notebooks-data
+        target: /data/db
+    networks:
+      - notebooks-network
+
+volumes:
+  notebooks-data:
+
+networks:
+  notebooks-network:
