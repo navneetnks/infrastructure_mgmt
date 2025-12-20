@@ -1,0 +1,60 @@
+name: key-value-app
+services:
+  
+  backend:
+    build:
+      context: backend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env.db-key-value
+    environment:
+      - MONGODB_HOST=db
+      - PORT=3000
+      # - CHOKIDAR_USEPOLLING=true
+    ports:
+      - 3000:3000
+    # volumes:
+    #   - type: bind
+    #     source: ./backend/src
+    #     target: /app/src
+    #     read_only: true
+      # - ./backend/src:/app/src:ro
+    depends_on:
+      - db
+    networks:
+      - key-value-net
+    develop:
+      watch:
+        - path: ./backend/src
+          action: sync
+          target: /app/src
+  db:
+    # Use the official MongoDB image for reliable init behavior
+    image: mongo:6.0
+    env_file:
+      - .env.db-root-cred
+      - .env.db-key-value
+    ports:
+      - 27017:27017
+    volumes:
+
+      - type: bind
+        source: ./db-config/mongo-init.js
+        target: /docker-entrypoint-initdb.d/mongo-init.js
+        read_only: true
+      # - ./db-config/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    
+      - type: volume
+        source: mongodb-data
+        target: /data/db
+      # - mongodb-data:/data/db
+    
+    networks:
+      - key-value-net
+
+      
+volumes:
+  mongodb-data:
+
+networks:
+  key-value-net:
